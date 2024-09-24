@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>KMeans Clustering Demo</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+</head>
+<body>
+    <h1>KMeans Clustering with Initialization Methods</h1>
+
+    <form id="kmeans-form">
+        <label for="init-method">Initialization Method:</label>
+        <select id="init-method" name="init_method">
+            <option value="random">Random</option>
+            <option value="farthest_first">Farthest First</option>
+            <option value="kmeans++">KMeans++</option>
+            <option value="manual">Manual</option>
+        </select>
+
+        <label for="n-clusters">Number of Clusters:</label>
+        <input type="number" id="n-clusters" name="n_clusters" value="3" min="2" max="10">
+
+        <button type="submit">Run KMeans</button>
+    </form>
+
+    <div id="plot-container">
+        <canvas id="cluster-chart" width="400" height="400"></canvas>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="{{ url_for('static', filename='script.js') }}"></script>
+</body>
+</html>
