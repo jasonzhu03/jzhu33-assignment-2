@@ -70,6 +70,26 @@
             }
         });
 
+        function captureManualCentroid(event) {
+            if (!selecting_centroids) return;
+
+            const plotDiv = document.getElementById('plot');
+            const rect = plotDiv.getBoundingClientRect();
+            const xPos = event.clientX - rect.left; // X coordinate relative to the plot
+            const yPos = event.clientY - rect.top;  // Y coordinate relative to the plot
+
+            const xAxis = plotDiv._fullLayout.xaxis;
+            const yAxis = plotDiv._fullLayout.yaxis;
+
+            // Translate pixel coordinates to data coordinates
+            const xValue = xAxis.p2c(xPos);
+            const yValue = yAxis.p2c(yPos);
+
+            console.log(`Manual centroid added at: (${xValue}, ${yValue})`);
+
+            manual_centroids.push([xValue, yValue]);
+            plotResults(points, manual_centroids, []);
+        }
 
         // Plot the results using Plotly
         function plotResults(points, centroids, labels) {
@@ -111,21 +131,7 @@
 
             Plotly.newPlot('plot', data, layout).then(function() {
                 // Plotly click event to capture centroids
-                document.getElementById('plot').on('plotly_click', function(data) {
-                    if (!selecting_centroids) return;
-
-                    console.log('Click event detected.');
-
-                    const xValue = data.points[0].x; // Get x value of clicked point
-                    const yValue = data.points[0].y; // Get y value of clicked point
-
-                    console.log(data)
-
-                    console.log(`Manual centroid added at: (${xValue}, ${yValue})`);
-
-                    manual_centroids.push([xValue, yValue]); // Store the centroid
-                    plotResults(points, manual_centroids, []); // Update the plot with new centroids
-                });
+                document.getElementById('plot').addEventListener('click', captureManualCentroid);
             });
         }
 
