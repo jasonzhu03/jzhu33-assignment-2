@@ -2,7 +2,7 @@ import numpy as np
 import numpy as np
 
 class KMeans:
-    def __init__(self, n_clusters=3, init='random', max_iter=300, manual_centroids=None):
+    def __init__(self, n_clusters = 3, init='random', max_iter = 300, manual_centroids = None):
         self.n_clusters = n_clusters
         self.init = init
         self.max_iter = max_iter
@@ -13,7 +13,7 @@ class KMeans:
 
     def initialize_centroids(self, X):
         if self.init == 'random':
-            indices = np.random.choice(X.shape[0], self.n_clusters, replace=False)
+            indices = np.random.choice(X.shape[0], self.n_clusters, replace = False)
             return X[indices]
         elif self.init == 'farthest':
             return self.farthest_first_initialization(X)
@@ -35,18 +35,18 @@ class KMeans:
     def kmeans_plus_plus_initialization(self, X):
         centroids = [X[np.random.choice(X.shape[0])]]
         for _ in range(1, self.n_clusters):
-            distances = np.min([np.linalg.norm(X - c, axis=1)**2 for c in centroids], axis=0)
+            distances = np.min([np.linalg.norm(X - c, axis = 1) ** 2 for c in centroids], axis = 0)
             prob_dist = distances / np.sum(distances)
-            next_centroid = X[np.random.choice(X.shape[0], p=prob_dist)]
+            next_centroid = X[np.random.choice(X.shape[0], p = prob_dist)]
             centroids.append(next_centroid)
         return np.array(centroids)
 
     def assign_clusters(self, X):
-        distances = np.linalg.norm(X[:, np.newaxis] - self.centroids, axis=2)
-        return np.argmin(distances, axis=1)
+        distances = np.linalg.norm(X[:, np.newaxis] - self.centroids, axis = 2)
+        return np.argmin(distances, axis = 1)
 
     def update_centroids(self, X, labels):
-        new_centroids = np.array([X[labels == i].mean(axis=0) for i in range(self.n_clusters)])
+        new_centroids = np.array([X[labels == i].mean(axis = 0) for i in range(self.n_clusters)])
         return new_centroids
 
     def partial_fit(self, X):

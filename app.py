@@ -22,9 +22,9 @@ def run_kmeans():
     manual_centroids = np.array(data['manual_centroids']) if 'manual_centroids' in data else None
     if init_method == 'manual' and manual_centroids is not None:
         manual_centroids = np.array(data['manual_centroids'])
-        kmeans = KMeans(n_clusters=n_clusters, init=init_method, manual_centroids=manual_centroids)
+        kmeans = KMeans(n_clusters = n_clusters, init = init_method, manual_centroids = manual_centroids)
     else:
-        kmeans = KMeans(n_clusters=n_clusters, init=init_method)
+        kmeans = KMeans(n_clusters = n_clusters, init = init_method)
 
     # Initialize KMeans for step-wise execution
     kmeans_state = {
