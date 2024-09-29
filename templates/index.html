@@ -3,223 +3,246 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>KMeans Clustering Algorithm</title>
 
-    <!-- Include Plotly from CDN -->
+    <title>KMeans Clustering Algorithm</title>
     <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
 
     <style>
         body {
-            font-family: Arial, sans-serif;
-            margin: 20px;
-            text-align: center;
+            font-family: Arial, sans-serif; /* Set font style */
+            background-color: #FFEBCD; /* Set background color */
+            text-align: center; /* Center align text */
         }
-
-        /* Increase the size of the plot while keeping it square */
+        h1 {
+            color: #333333; /* Set color for the heading */
+        }
+        button {
+            padding: 5px; /* Padding for buttons */
+            font-size: 14px; /* Font size for buttons */
+            margin: 5px; /* Margin for buttons */
+            cursor: pointer; /* Change cursor to pointer on hover */
+        }
         #plot {
-            width: 800px;
-            height: 800px;
-            margin: 20px auto;
-        }
-
-        /* Add some spacing for buttons */
-        .controls {
-            margin-bottom: 20px;
-            line-height: 1.5;
+            width: 700px; /* Set width for the plot */
+            height: 700px; /* Set height for the plot */
+            margin: auto; /* Center the plot */
+            border: 3px solid #ffde9c; /* Set border for the plot */
         }
     </style>
 </head>
 <body>
+    <h1>K Means Clustering Algorithm</h1>
 
-    <div class="controls">
     <label for="n_clusters">Number of Clusters (k):</label>
-    <input type="number" id="n_clusters" value="3" min="2" max="10">
+    <input type="number" id="n_clusters" value="3" min="2" max="10"> <!-- Input for number of clusters -->
+    <br><br>
 
     <label for="init_method">Initialization Method:</label>
-    <select id="init_method">
+    <select id="init_method" onchange="checkManualInit()"> <!-- Dropdown for initialization method -->
         <option value="random">Random</option>
         <option value="farthest">Farthest First</option>
         <option value="kmeans++">KMeans++</option>
         <option value="manual">Manual</option>
     </select>
+    <br><br>
 
-    <!-- Wrap buttons in divs -->
     <div>
-        <button onclick="generateNewDataset()">Generate New Dataset</button>
+        <button onclick="generateNewDataset()">Generate New Dataset</button> <!-- Button to generate new dataset -->
     </div>
     <div>
-        <button onclick="stepKMeans()">Step Through KMeans</button>
+        <button onclick="stepKMeans()">Step Through KMeans</button> <!-- Button to step through KMeans -->
     </div>
     <div>
-        <button onclick="runToConvergence()">Run to Convergence</button>
+        <button onclick="runToConvergence()">Run to Convergence</button> <!-- Button to run KMeans to convergence -->
     </div>
     <div>
-        <button onclick="resetAlgorithm()">Reset</button>
+        <button onclick="resetAlgorithm()">Reset</button> <!-- Button to reset the algorithm -->
     </div>
-</div>
-
-    <!-- Plotly graph container -->
-    <div id="plot"></div>
+    
+    <div id="plot"></div> <!-- Div for plotting results -->
 
     <script>
-        let points = [];
-        let manual_centroids = [];
-        let kmeans_initialized = false;
-        let selecting_centroids = false;
+        let points = []; // Array to hold data points
+        let manual_centroids = []; // Array to hold manually added centroids
+        let kmeans_initialized = false; // Flag to check if KMeans has been initialized
 
-        document.getElementById('init_method').addEventListener('change', function () {
-            const init_method = this.value;
+        /**
+         * Generates a new dataset of random points within a specified range.
+         * Resets manual centroids and initializes the plot with the new dataset.
+         */
+        function generateNewDataset() {
+            points = [...Array(300)].map(() => [Math.random() * 20 - 10, Math.random() * 20 - 10]); // Generate 300 random points
+            manual_centroids = []; // Reset manual centroids
+            plotResults(points, [], []); // Clear previous plot
+            kmeans_initialized = false; // Reset initialization flag
+        }
+
+        /**
+         * Checks the selected initialization method from the dropdown.
+         * If 'manual' is selected, it enables the option to add centroids by clicking on the plot.
+         */
+        function checkManualInit() {
+            const init_method = document.getElementById('init_method').value; // Get selected initialization method
             if (init_method === 'manual') {
-                selecting_centroids = true;
-                manual_centroids = [];
-                alert('Please click on the graph to select centroids.');
+                document.getElementById('plot').addEventListener('click', addManualCentroid); // Enable manual centroid addition
             } else {
-                selecting_centroids = false;
+                document.getElementById('plot').removeEventListener('click', addManualCentroid); // Disable manual centroid addition
             }
-        });
-
-
-        // Plot the results using Plotly
-        function plotResults(points, centroids, labels) {
-            const tracePoints = {
-                x: points.map(p => p[0]),
-                y: points.map(p => p[1]),
-                mode: 'markers',
-                marker: {
-                    size: 8,
-                    color: labels,
-                    colorscale: 'Viridis'
-                },
-                name: 'Data Points',
-                type: 'scatter'
-            };
-
-            const traceCentroids = centroids.length ? {
-                x: centroids.map(c => c[0]),
-                y: centroids.map(c => c[1]),
-                mode: 'markers',
-                marker: {
-                    size: 16,
-                    color: 'red',
-                    symbol: 'x'
-                },
-                name: 'Centroids',
-                type: 'scatter'
-            } : null;
-
-            const data = traceCentroids ? [tracePoints, traceCentroids] : [tracePoints];
-
-            const layout = {
-                xaxis: { range: [-10, 10], scaleanchor: "y", scaleratio: 1 },
-                yaxis: { range: [-10, 10] },
-                title: 'KMeans Clustering Data',
-                width: 800,  // Make the plot larger
-                height: 800  // Make the plot larger
-            };
-
-            Plotly.newPlot('plot', data, layout).then(function() {
-                // Plotly click event to capture centroids
-                document.getElementById('plot').on('plotly_click', function(data) {
-                    if (!selecting_centroids) return;
-
-                    console.log('Click event detected.');
-
-                    const xValue = data.points[0].x; // Get x value of clicked point
-                    const yValue = data.points[0].y; // Get y value of clicked point
-
-                    console.log(data)
-
-                    console.log(`Manual centroid added at: (${xValue}, ${yValue})`);
-
-                    manual_centroids.push([xValue, yValue]); // Store the centroid
-                    plotResults(points, manual_centroids, []); // Update the plot with new centroids
-                });
-            });
         }
 
-
-
-        // Event listener for mouse clicks on the plot
-        // document.getElementById('plot').addEventListener('click', captureManualCentroid);
-
-        // KMeans and other functions (unchanged)
-        async function initializeKMeans() {
-            const n_clusters = document.getElementById('n_clusters').value;
-            const init_method = document.getElementById('init_method').value;
-
-            if (init_method === 'manual' && manual_centroids.length === 0) {
-                alert('Please select centroids manually by clicking on the graph.');
-                return;
-            }
-
-            const response = await fetch('/run_kmeans', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ points, n_clusters, init_method, manual_centroids })
-            });
-
-            const data = await response.json();
-            const { centroids, labels } = data;
-
-            plotResults(points, centroids, labels);
-            kmeans_initialized = true;
+        /**
+         * Adds a new centroid at the clicked position on the plot.
+         * Calculates the centroid coordinates based on mouse click position
+         * and updates the plot to display the new centroid.
+         * 
+         * @param {MouseEvent} event - The mouse event triggered by clicking on the plot.
+         */
+        function addManualCentroid(event) {
+            const rect = event.target.getBoundingClientRect(); // Get the plot boundaries
+            const x = (event.clientX - rect.left) * 20 / rect.width - 10; // Calculate x-coordinate
+            const y = 10 - (event.clientY - rect.top) * 20 / rect.height; // Calculate y-coordinate
+            manual_centroids.push([x, y]); // Add the new centroid
+            plotResults(points, manual_centroids, []); // Update the plot with the new centroid
         }
 
+        /**
+         * Steps through the KMeans clustering algorithm.
+         * Initializes the algorithm if not already done, sends current points
+         * and parameters to the server, and updates the plot with new centroids and labels.
+         */
         async function stepKMeans() {
+            const n_clusters = document.getElementById('n_clusters').value; // Get number of clusters
+            const init_method = document.getElementById('init_method').value; // Get initialization method
+
             if (!kmeans_initialized) {
-                await initializeKMeans();
+                await initializeKMeans(); // Initialize KMeans if not already initialized
             }
 
             const response = await fetch('/step_kmeans', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' }
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ points, n_clusters, init_method, manual_centroids }) // Send data to the server
             });
 
-            const data = await response.json();
-            const { centroids, labels, converged } = data;
+            const data = await response.json(); // Parse response
+            const { centroids, labels, converged } = data; // Destructure response data
 
             if (converged) {
-                alert('KMeans has converged!');
+                alert('KMeans has converged!'); // Alert if KMeans has converged
             }
 
-            plotResults(points, centroids, labels);
+            plotResults(points, centroids, labels); // Update the plot with new centroids and labels
         }
 
+        /**
+         * Runs the KMeans algorithm until convergence.
+         * Initializes the algorithm if not done, sends the points and parameters
+         * to the server, and updates the plot with the final centroids and labels.
+         */
         async function runToConvergence() {
+            const n_clusters = document.getElementById('n_clusters').value; // Get number of clusters
+            const init_method = document.getElementById('init_method').value; // Get initialization method
+
             if (!kmeans_initialized) {
-                await initializeKMeans();
+                await initializeKMeans(); // Initialize KMeans if not already initialized
             }
 
             const response = await fetch('/run_to_convergence', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' }
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ points, n_clusters, init_method, manual_centroids }) // Send data to the server
             });
 
-            const data = await response.json();
-            const { centroids, labels } = data;
+            const data = await response.json(); // Parse response
+            const { centroids, labels } = data; // Destructure response data
 
-            plotResults(points, centroids, labels);
-            alert('KMeans has converged!');
+            plotResults(points, centroids, labels); // Update the plot with new centroids and labels
+            alert('KMeans has converged!'); // Alert that KMeans has converged
         }
 
-        async function generateNewDataset() {
-            points = [...Array(300)].map(() => [Math.random() * 20 - 10, Math.random() * 20 - 10]);
-            manual_centroids = [];
-            plotResults(points, [], []);
-            kmeans_initialized = false;
-        }
+        /**
+         * Initializes the KMeans algorithm by sending initial parameters and points to the server.
+         * Updates the plot with the initial centroids and labels.
+         */
+        async function initializeKMeans() {
+            const n_clusters = document.getElementById('n_clusters').value; // Get number of clusters
+            const init_method = document.getElementById('init_method').value; // Get initialization method
 
-        async function resetAlgorithm() {
-            await fetch('/reset', {
+            const response = await fetch('/run_kmeans', {
                 method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ points, n_clusters, init_method, manual_centroids }) // Send data to the server
             });
 
-            plotResults(points, [], []);
-            kmeans_initialized = false;
-            manual_centroids = [];
+            const data = await response.json(); // Parse response
+            const { centroids, labels } = data; // Destructure response data
+
+            plotResults(points, centroids, labels); // Update the plot with initial centroids and labels
+            kmeans_initialized = true; // Set the initialization flag to true
         }
 
-        generateNewDataset();
+        /**
+         * Resets the KMeans algorithm by sending a reset request to the server.
+         * Clears any manually added centroids and updates the plot to show only the data points.
+         */
+        async function resetAlgorithm() {
+            await fetch('/reset', { method: 'POST' }); // Reset the algorithm on the server
+            manual_centroids = []; // Clear manual centroids
+            plotResults(points, [], []); // Reset plot to only show points
+            kmeans_initialized = false; // Reset initialization flag
+        }
+
+        /**
+         * Plots the results of the KMeans clustering.
+         * Displays the data points and their assigned cluster centroids.
+         * 
+         * @param {Array} points - The data points to plot.
+         * @param {Array} centroids - The current centroids of the clusters.
+         * @param {Array} labels - The labels indicating which cluster each point belongs to.
+         */
+        function plotResults(points, centroids, labels) {
+            const tracePoints = {
+                x: points.map(p => p[0]), // X-coordinates of data points
+                y: points.map(p => p[1]), // Y-coordinates of data points
+                mode: 'markers', // Marker mode for points
+                marker: {
+                    size: 8, // Size of data point markers
+                    color: labels, // Color points based on their assigned labels
+                    colorscale: 'Viridis' // Color scale for clusters
+                },
+                name: 'Data Points',
+                type: 'scatter' // Type of plot
+            };
+        
+            const traceCentroids = centroids.length ? {
+                x: centroids.map(c => c[0]), // X-coordinates of centroids
+                y: centroids.map(c => c[1]), // Y-coordinates of centroids
+                mode: 'markers', // Marker mode for centroids
+                marker: {
+                    size: 16, // Size of centroid markers
+                    color: 'red', // Color of centroid markers
+                    symbol: 'x' // Symbol for centroids
+                },
+                name: 'Centroids',
+                type: 'scatter' // Type of plot for centroids
+            } : null; // If no centroids, set to null
+        
+            const data = traceCentroids ? [tracePoints, traceCentroids] : [tracePoints]; // Combine data points and centroids for plotting
+        
+            const layout = {
+                xaxis: { range: [-10, 10], scaleanchor: "y", scaleratio: 1 }, // Set x-axis range and scale
+                yaxis: { range: [-10, 10], constrain: "domain" }, // Set y-axis range and constraint
+                width: 700, // Set plot width
+                height: 700, // Set plot height
+                title: 'K Means Clustering Animation', // Title of the plot
+                margin: { t: 50, b: 0, l: 50, r: 20 }, // Set plot margins
+                showlegend: true, // Show legend
+            };
+        
+            Plotly.newPlot('plot', data, layout); // Render the plot
+        }
+
+        generateNewDataset(); // Generate initial dataset on page load
     </script>
 </body>
 </html>
